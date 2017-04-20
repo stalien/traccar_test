@@ -11,12 +11,27 @@ public class SuntechProtocolDecoderTest extends ProtocolTest {
         SuntechProtocolDecoder decoder = new SuntechProtocolDecoder(new SuntechProtocol());
 
         verifyPosition(decoder, text(
+                "ST910;Location;205576803;500;20170319;12:18:17;-22.846014;-046.322176;000.000;000.00;0;3.8;0;1;9159"));
+
+        verifyPosition(decoder, text(
+                "ST910;Emergency;205576803;500;20170319;12:15:22;-22.846014;-046.322176;000.000;000.00;0;2"));
+
+        verifyPosition(decoder, text(
+                "ST910;Location;205576803;500;20170312;12:56:52;-22.846014;-046.322176;000.000;000.00;0;3.8;0;0;0019"));
+
+        verifyPosition(decoder, text(
+                "ST300STT;100850000;01;010;20081017;07:41:56;00100;+37.478519;+126.886819;000.012;000.00;9;1;0;15.30;001100;1;0072;0;4.5;1;1750;012497F1160000;1;004f001454;450;00;-320;20;255;1"));
+
+        verifyPosition(decoder, text(
+                "ST300STT;205589913;05;527;20170304;02:21:33;be139;-25.398868;-049.325636;000.476;000.00;6;1;427;12.57;100000010;1;0172;017.159;0;002.327;12;4.0"));
+
+        verifyPosition(decoder, text(
                 "SA200STT;638947;803;20170117;07:40:44;5d309;-01.287213;-047.917462;000.035;000.00;10;1;2036194;12.57;000000;1;0376;010360;4.2;1"));
 
         verifyPosition(decoder, text(
                 "ST300ALT;205174410;14;712;20110101;00:00:07;00000;+20.593923;-100.336716;000.000;000.00;0;0;0;16.57;000000;81;000000;4.0;0;0.00;0000;0000;0;0"));
 
-        verifyNothing(decoder, text(
+        verifyNull(decoder, text(
                 "SA200ALV;317652"));
         
         verifyPosition(decoder, text(
@@ -63,7 +78,16 @@ public class SuntechProtocolDecoderTest extends ProtocolTest {
         decoder.setProtocolType(1);
 
         verifyPosition(decoder, text(
+                "ST910;Alert;485195;20170409;22:37:41;3be0133057;+24.882410;-107.509152;000.070;000.00;1;286734;72;02;295;05;-415;4912;255;10;10"));
+
+        verifyPosition(decoder, text(
+                "ST910;Location;485195;528;20170410;01:18:57;f1dd134840;+24.787139;-107.434679;000.020;000.00;1;286734;100;1;0;0188;02;295;05;-339;4936;255;4;74"));
+
+        verifyPosition(decoder, text(
                 "ST910;Location;560266;500;20161207;21:33:11;af910be101;-25.504234;-049.278003;000.080;000.00;1;10054889;70;1;1;1311;02;724;06;-317;3041;2;10;92"));
+
+        verifyPosition(decoder, text(
+                "ST910;Emergency;238569;528;20170403;00:02:09;7574160020;+19.661292;-099.144473;000.176;000.00;1;228638;1"));
 
     }
 

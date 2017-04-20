@@ -10,7 +10,40 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
 
         Gl200ProtocolDecoder decoder = new Gl200ProtocolDecoder(new Gl200Protocol());
 
-        verifyNothing(decoder, text(
+        verifyNotNull(decoder, text(
+                "+BUFF:GTIGL,060228,862894020180553,,,00,1,1,3.4,199,409.6,-63.174466,-17.739317,20170407121823,0000,0000,0000,0000,00,15989.5,20170407081824,9606$"));
+
+        verifyNotNull(decoder, text(
+                "+RESP:GTFRI,060228,862894020180553,,14827,10,1,1,3.4,199,409.6,-63.174466,-17.739317,20170407121823,0000,0000,0000,0000,00,15989.5,01070:43:13,13,180,0,220101,,,,20170407081824,9607$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTERI,060502,861074023376992,,00000002,27239,10,1,1,0.2,312,183.3,-79.320820,-2.499110,20170401212005,0740,0000,EE4E,C98F,00,0.0,02114:36:35,,,90,220504,2,0,0,20170401212007,9E3D$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTFRI,060502,861074023689626,,25202,10,1,1,0.0,0,2744.1,-78.261047,0.023452,20170401211940,,,,,,0.0,00079:19:15,,,51,110000,,,,20170401212003,4DA7$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTFRI,060100,135790246811220,,,00,1,1,4.3,92,70.0,121.354335,31.222073,20090214013254,0460,0000,18d8,6141,00,2000.0,12345:12:34,,,80,210100,,,,20090214093254,11F0$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTERI,06020B,862170010196747,,00000000,,10,1,2,1.8,0,-2.5,117.198440,31.845219,20120802061037,0460,0000,5663,0358,00,0.0,,,,0,410000,20120802061040,0012$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTERI,060502,861074023692562,,00000002,14197,10,1,1,0.2,220,491.8,-79.064212,-2.159754,20170401212007,0740,0000,EE49,CE25,00,0.0,01509:10:58,,,87,220104,2,0,0,20170401212010,D14D$"));
+
+        verifyPositions(decoder, text(
+                "+RESP:GTFRI,210102,354524044925825,,1,1,1,29,2.8,0,133.7,-90.203063,32.265473,20170318005208,,,,,10800,4,20170318005208,0002$"));
+
+        verifyPositions(decoder, false, text(
+                "+RESP:GTFRI,210102,354524044925825,,1,1,1,,,,,,,,310,410,51bc,ca1dae6,10800,1,20170318214333,0002$"));
+
+        verifyAttributes(decoder, text(
+                "+RESP:GTGSM,400201,862365030025161,STR,0234,0015,003a,62a2,16,,0234,0015,003a,56a2,14,,0234,0015,003a,062a,13,,0234,0015,003a,32d9,11,,0234,0015,003a,56a0,11,,,,,,,,0234,0015,003a,7489,17,,20170219200048,0033$"));
+
+        verifyAttributes(decoder, text(
+                "+RESP:GTGSM,400201,862365030025161,STR,0234,0015,003a,56a2,18,,0234,0015,003a,77bc,14,,0234,0015,003a,32d9,12,,0234,0015,003a,062a,12,,0234,0015,003a,62a2,11,,0234,0015,003a,56a0,10,,0234,0015,003a,7489,15,,20170219080049,0030$"));
+
+        verifyAttributes(decoder, text(
                 "+RESP:GTGSM,400201,862365030034940,STR,0234,0030,0870,2469,19,,0234,0030,0870,35ee,18,,0234,0030,0870,16ac,12,,0234,0030,0870,16b2,11,,0234,0030,0870,360f,6,,0234,0030,0870,165d,6,,0234,0030,0870,35ef,17,,20170215220049,008D$"));
 
         verifyPosition(decoder, text(
@@ -100,7 +133,7 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
         verifyPositions(decoder, text(
                 "+BUFF:GTFRI,060402,862894021808798,,,10,1,1,0.0,349,394.3,-63.287717,-17.662410,20160116234031,0736,0003,6ABA,8305,00,3326.8,,,,94,220100,,,,20160116194035,4D83"));
 
-        verifyPosition(decoder, text(
+        verifyPositions(decoder, text(
                 "+RESP:GTFRI,2C0204,867162020003125,GL300W,0,0,2,1,1.7,205,2867.0,-78.481127,-0.206828,20160215210433,0740,0000,7596,5891C,0.0,1,1.7,205,2867.0,-78.481127,-0.206828,20160215210503,0740,0000,7596,5891C,0.0,88,20160215210506,1E78$"));
 
         verifyPositions(decoder, text(
@@ -109,7 +142,7 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
         verifyPositions(decoder, text(
                 "+RESP:GTFRI,110100,A5868800000015,,0,0,1,1,4.3,92,70.0,121.354335,31.222073,20110214013254,0460,0000,18d8,6141,00,80,20110214013254,000C"));
 
-        verifyPositions(decoder, text(
+        verifyNotNull(decoder, text(
                 "+RESP:GTFRI,210102,A10000458356CE,,0,1,1,15,1.4,0,190.6,-85.765763,42.894896,20160208164505,4126,210,0,18673,00,92,20160208164507,00A6"));
 
         verifyPositions(decoder, text(
@@ -145,7 +178,7 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
         verifyPositions(decoder, text(
                 "+RESP:GTFRI,02010D,867844001675407,,0,0,1,2,0.0,0,28.9,8.591011,56.476397,20140915213209,0238,0001,03CB,2871,,97,20140915213459,009A"));
 
-        verifyNothing(decoder, text(
+        verifyNull(decoder, text(
                 "+RESP:GTINF,359464030073766,8938003990320469804f,18,99,100,1,0,+2.00,0,20131018084015,00EE,0103090402"));
 
         verifyPositions(decoder, text(
@@ -196,10 +229,10 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
         verifyPositions(decoder, text(
                 "+RESP:GTFRI,240100,135790246811220,,,10,2,1,4.3,92,70.0,121.354335,31.222073,20090214013254,0460,0000,18d8,6141,00,0,4.3,92,70.0,121.354335,31.222073,20090101000000,0460,0000,18d8,6141,00,2000.0,12345:12:34,,,80,,,,,20090214093254,11F0$"));
 
-        verifyPosition(decoder, text(
+        verifyNotNull(decoder, text(
                 "+RESP:GTSTT,280100,A1000043D20139,,42,0,0.1,321,228.6,-76.660884,39.832552,20150615120628,0310,0484,00600019,0A52,,20150615085741,0320$"));
 
-        verifyPosition(decoder, text(
+        verifyNotNull(decoder, text(
                 "+RESP:GTRTL,280100,A1000043D20139,,0,0,1,1,0.1,321,239.1,-76.661047,39.832501,20150615114455,0310,0484,00600019,0A52,,87,20150615074456,031E$"));
         
         verifyAttributes(decoder, text(
@@ -220,7 +253,7 @@ public class Gl200ProtocolDecoderTest extends ProtocolTest {
         verifyAttributes(decoder, text(
                 "+RESP:GTVER,1A0800,860599000773978,GL300,GL300,0A03,0103,20161007041531,10F8$"));
 
-        verifyNothing(decoder, text(
+        verifyNull(decoder, text(
                 "+ACK:GTHBD,1A0401,135790246811220,,20100214093254,11F0"));
 
         verifyAttributes(decoder, text(

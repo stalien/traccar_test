@@ -41,14 +41,14 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+)(,)?")                  // device id
             .expression(".{4},?")                // command
             .number("d*")                        // imei?
-            .number("(dd)(dd)(dd),?")            // date
+            .number("(dd)(dd)(dd),?")            // date (mmddyy if comma-delimited, otherwise yyddmm)
             .expression("([AV]),?")              // validity
             .number("(d+)(dd.d+)")               // latitude
             .expression("([NS]),?")
             .number("(d+)(dd.d+)")               // longitude
             .expression("([EW]),?")
             .number("(d+.d)(?:d*,)?")            // speed
-            .number("(dd)(dd)(dd),?")            // time
+            .number("(dd)(dd)(dd),?")            // time (hhmmss)
             .number("(d+.?d{1,2}),?")            // course
             .number("(?:([01]{8})|(x{8}))?,?")   // state
             .number("(?:L(x+))?")                // odometer
@@ -61,7 +61,7 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+),")                     // device id
             .text("ZC20,")
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .number("d+,")                       // battery level
             .number("(d+),")                     // battery voltage
             .number("(d+),")                     // power voltage
@@ -138,18 +138,14 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             }
             position.setDeviceId(deviceSession.getDeviceId());
 
-            DateBuilder dateBuilder = new DateBuilder()
-                    .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                    .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            getLastLocation(position, parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
-            getLastLocation(position, dateBuilder.getDate());
-
-            int battery = parser.nextInt();
+            int battery = parser.nextInt(0);
             if (battery != 65535) {
                 position.set(Position.KEY_BATTERY, battery * 0.01);
             }
 
-            int power = parser.nextInt();
+            int power = parser.nextInt(0);
             if (power != 65535) {
                 position.set(Position.KEY_POWER, power * 0.1);
             }
@@ -168,7 +164,7 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             getLastLocation(position, null);
 
             position.setNetwork(new Network(CellTower.from(
-                    parser.nextInt(), parser.nextInt(), parser.nextInt(16), parser.nextInt(16))));
+                    parser.nextInt(0), parser.nextInt(0), parser.nextHexInt(0), parser.nextHexInt(0))));
 
             return position;
         }
@@ -191,9 +187,9 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
         DateBuilder dateBuilder = new DateBuilder();
         if (parser.next() == null) {
-            dateBuilder.setDate(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            dateBuilder.setDate(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         } else {
-            dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         }
 
         position.setValid(parser.next().equals("A"));
@@ -202,20 +198,20 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
         switch (Context.getConfig().getString(getProtocolName() + ".speed", "kmh")) {
             case "kn":
-                position.setSpeed(parser.nextDouble());
+                position.setSpeed(parser.nextDouble(0));
                 break;
             case "mph":
-                position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble()));
+                position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble(0)));
                 break;
             default:
-                position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
+                position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
                 break;
         }
 
-        dateBuilder.setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+        dateBuilder.setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         position.setTime(dateBuilder.getDate());
 
-        position.setCourse(parser.nextDouble());
+        position.setCourse(parser.nextDouble(0));
 
         String status = parser.next();
         if (status != null) {
@@ -228,11 +224,11 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_STATUS, parser.next()); // hex status
 
         if (parser.hasNext()) {
-            position.set(Position.KEY_ODOMETER, parser.nextLong(16));
+            position.set(Position.KEY_ODOMETER, parser.nextLong(16, 0));
         }
 
         if (parser.hasNext()) {
-            position.set(Position.PREFIX_TEMP + 1, parser.nextDouble());
+            position.set(Position.PREFIX_TEMP + 1, parser.nextDouble(0));
         }
 
         return position;

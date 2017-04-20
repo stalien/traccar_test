@@ -43,8 +43,8 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             .text("*GS")                         // header
             .number("d+,")                       // protocol version
             .number("(d+),")                     // imei
-            .number("(dd)(dd)(dd)")              // time
-            .number("(dd)(dd)(dd),")             // date
+            .number("(dd)(dd)(dd)")              // time (hhmmss)
+            .number("(dd)(dd)(dd),")             // date (ddmmyy)
             .expression("(.*)#?")                // data
             .compile();
 
@@ -121,7 +121,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             .number("d+,")                       // protocol version
             .number("(d+),")                     // imei
             .text("GPS:")
-            .number("(dd)(dd)(dd);")             // time
+            .number("(dd)(dd)(dd);")             // time (hhmmss)
             .number("d;").optional()             // fix type
             .expression("([AV]);")               // validity
             .number("([NS])(d+.d+);")            // latitude
@@ -129,7 +129,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+)?;")                    // speed
             .number("(d+);")                     // course
             .number("(d+.?d*)").optional()       // hdop
-            .number("(dd)(dd)(dd)")              // date
+            .number("(dd)(dd)(dd)")              // date (ddmmyy)
             .any()
             .compile();
 
@@ -150,25 +150,25 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
 
         position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
         position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
 
-        position.set(Position.KEY_HDOP, parser.nextDouble());
-        position.set(Position.KEY_VDOP, parser.nextDouble());
+        position.set(Position.KEY_HDOP, parser.nextDouble(0));
+        position.set(Position.KEY_VDOP, parser.nextDouble(0));
 
         if (parser.hasNext(5)) {
-            position.setNetwork(new Network(CellTower.from(
-                    parser.nextInt(), parser.nextInt(), parser.nextInt(16), parser.nextInt(16), parser.nextInt())));
+            position.setNetwork(new Network(CellTower.from(parser.nextInt(0), parser.nextInt(0),
+                    parser.nextHexInt(0), parser.nextHexInt(0), parser.nextInt(0))));
         }
         if (parser.hasNext()) {
-            position.set(Position.KEY_ODOMETER, parser.nextInt());
+            position.set(Position.KEY_ODOMETER, parser.nextInt(0));
         }
         position.set(Position.KEY_POWER, parser.next());
         position.set(Position.KEY_BATTERY, parser.next());
 
         if (parser.hasNext(6)) {
-            long status = parser.nextLong(16);
+            long status = parser.nextLong(16, 0);
             position.set(Position.KEY_IGNITION, BitUtil.check(status, 13));
             position.set(Position.KEY_STATUS, status);
             position.set("ioStatus", parser.next());
@@ -223,17 +223,17 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
             position.setDeviceId(deviceSession.getDeviceId());
 
             DateBuilder dateBuilder = new DateBuilder()
-                    .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+                    .setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
 
             position.setValid(parser.next().equals("A"));
             position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
             position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG));
-            position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-            position.setCourse(parser.nextDouble());
+            position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+            position.setCourse(parser.nextDouble(0));
 
             position.set(Position.KEY_HDOP, parser.next());
 
-            dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
             position.setTime(dateBuilder.getDate());
 
             return position;
@@ -242,10 +242,7 @@ public class GoSafeProtocolDecoder extends BaseProtocolDecoder {
 
             Date time = null;
             if (parser.hasNext(6)) {
-                DateBuilder dateBuilder = new DateBuilder()
-                        .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                        .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
-                time = dateBuilder.getDate();
+                time = parser.nextDateTime(Parser.DateTimeFormat.HMS_DMY);
             }
 
             List<Position> positions = new LinkedList<>();

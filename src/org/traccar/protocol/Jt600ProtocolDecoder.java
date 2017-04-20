@@ -145,7 +145,7 @@ public class Jt600ProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_ODOMETER, buf.readUnsignedInt() * 1000);
 
             fuel += buf.readUnsignedByte();
-            position.set(Position.KEY_FUEL, fuel);
+            position.set(Position.KEY_FUEL_LEVEL, fuel);
 
         }
 
@@ -162,7 +162,7 @@ public class Jt600ProtocolDecoder extends BaseProtocolDecoder {
             .expression("([NS]),")
             .expression("([AV]),")               // validity
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .number("(d+),")                     // speed
             .number("(d+),")                     // course
             .number("(d+),")                     // power
@@ -192,15 +192,15 @@ public class Jt600ProtocolDecoder extends BaseProtocolDecoder {
         position.setLatitude(parser.nextCoordinate());
         position.setValid(parser.next().equals("A"));
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
 
-        position.set(Position.KEY_POWER, parser.nextDouble());
+        position.set(Position.KEY_POWER, parser.nextDouble(0));
+        position.set(Position.KEY_GPS, parser.nextInt(0));
+        position.set(Position.KEY_RSSI, parser.nextInt(0));
+        position.set("alertType", parser.nextInt(0));
 
         return position;
     }
@@ -211,7 +211,7 @@ public class Jt600ProtocolDecoder extends BaseProtocolDecoder {
             .number("(Udd),")                    // type
             .number("d+,").optional()            // alarm
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .expression("([TF]),")               // validity
             .number("(d+.d+),([NS]),")           // latitude
             .number("(d+.d+),([EW]),")           // longitude
@@ -247,28 +247,25 @@ public class Jt600ProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
         position.setValid(parser.next().equals("T"));
         position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
         position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
 
-        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
 
-        position.set(Position.KEY_SATELLITES, parser.nextInt());
+        position.set(Position.KEY_SATELLITES, parser.nextInt(0));
         position.set(Position.KEY_BATTERY, parser.next());
-        position.set(Position.KEY_STATUS, parser.nextInt(2));
+        position.set(Position.KEY_STATUS, parser.nextBinInt(0));
 
-        CellTower cellTower = CellTower.fromCidLac(parser.nextInt(), parser.nextInt());
-        cellTower.setSignalStrength(parser.nextInt());
+        CellTower cellTower = CellTower.fromCidLac(parser.nextInt(0), parser.nextInt(0));
+        cellTower.setSignalStrength(parser.nextInt(0));
         position.setNetwork(new Network(cellTower));
 
-        position.set(Position.KEY_ODOMETER, parser.nextLong() * 1000);
-        position.set(Position.KEY_INDEX, parser.nextInt());
+        position.set(Position.KEY_ODOMETER, parser.nextLong(0) * 1000);
+        position.set(Position.KEY_INDEX, parser.nextInt(0));
 
         if (channel != null) {
             if (type.equals("U01") || type.equals("U02") || type.equals("U03")) {

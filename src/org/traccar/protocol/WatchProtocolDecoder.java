@@ -19,7 +19,6 @@ import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
 import org.traccar.helper.BitUtil;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -50,7 +49,7 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
     private static final Pattern PATTERN_POSITION = new PatternBuilder()
             .text(",")
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .expression("([AV]),")               // validity
             .number(" *(-?d+.d+),")              // latitude
             .expression("([NS]),")
@@ -167,7 +166,7 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
                 }
             }
 
-        } else if (type.equals("UD") || type.equals("UD2") || type.equals("AL")) {
+        } else if (type.equals("UD") || type.equals("UD2") || type.equals("UD3") || type.equals("AL")) {
 
             if (type.equals("AL")) {
                 sendResponse(channel, manufacturer, id, "AL");
@@ -182,25 +181,22 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             position.setProtocol(getProtocolName());
             position.setDeviceId(deviceSession.getDeviceId());
 
-            DateBuilder dateBuilder = new DateBuilder()
-                    .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                    .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-            position.setTime(dateBuilder.getDate());
+            position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
             position.setValid(parser.next().equals("A"));
             position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
             position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
-            position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-            position.setCourse(parser.nextDouble());
-            position.setAltitude(parser.nextDouble());
+            position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+            position.setCourse(parser.nextDouble(0));
+            position.setAltitude(parser.nextDouble(0));
 
-            position.set(Position.KEY_SATELLITES, parser.nextInt());
-            position.set(Position.KEY_RSSI, parser.nextInt());
-            position.set(Position.KEY_BATTERY, parser.nextInt());
+            position.set(Position.KEY_SATELLITES, parser.nextInt(0));
+            position.set(Position.KEY_RSSI, parser.nextInt(0));
+            position.set(Position.KEY_BATTERY, parser.nextInt(0));
 
-            position.set("steps", parser.nextInt());
+            position.set("steps", parser.nextInt(0));
 
-            position.set(Position.KEY_ALARM, decodeAlarm(parser.nextInt(16)));
+            position.set(Position.KEY_ALARM, decodeAlarm(parser.nextHexInt(0)));
 
             decodeTail(position, parser.next());
 

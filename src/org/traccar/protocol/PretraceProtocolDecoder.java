@@ -18,7 +18,6 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -39,8 +38,8 @@ public class PretraceProtocolDecoder extends BaseProtocolDecoder {
             .number("Uddd")                      // type
             .number("d")                         // gps type
             .expression("([AV])")                // validity
-            .number("(dd)(dd)(dd)")              // date
-            .number("(dd)(dd)(dd)")              // time
+            .number("(dd)(dd)(dd)")              // date (yymmdd)
+            .number("(dd)(dd)(dd)")              // time (hhmmss)
             .number("(dd)(dd.dddd)")             // latitude
             .expression("([NS])")
             .number("(ddd)(dd.dddd)")            // longitude
@@ -78,21 +77,18 @@ public class PretraceProtocolDecoder extends BaseProtocolDecoder {
 
         position.setValid(parser.next().equals("A"));
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
         position.setLatitude(parser.nextCoordinate());
         position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextInt()));
-        position.setCourse(parser.nextInt());
-        position.setAltitude(parser.nextInt(16));
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextInt(0)));
+        position.setCourse(parser.nextInt(0));
+        position.setAltitude(parser.nextHexInt(0));
 
-        position.set(Position.KEY_ODOMETER, parser.nextInt(16));
-        position.set(Position.KEY_SATELLITES, parser.nextInt(16));
-        position.set(Position.KEY_HDOP, parser.nextInt());
-        position.set(Position.KEY_RSSI, parser.nextInt());
+        position.set(Position.KEY_ODOMETER, parser.nextHexInt(0));
+        position.set(Position.KEY_SATELLITES, parser.nextHexInt(0));
+        position.set(Position.KEY_HDOP, parser.nextInt(0));
+        position.set(Position.KEY_RSSI, parser.nextInt(0));
 
         return position;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
+ * Copyright 2012 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.Context;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -50,8 +49,8 @@ public class MeitrackProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+),")                     // event
             .number("(-?d+.d+),")                // latitude
             .number("(-?d+.d+),")                // longitude
-            .number("(dd)(dd)(dd)")              // date (ddmmyy)
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd)")              // date (yymmdd)
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .number("([AV]),")                   // validity
             .number("(d+),")                     // satellites
             .number("(d+),")                     // rssi
@@ -85,6 +84,27 @@ public class MeitrackProtocolDecoder extends BaseProtocolDecoder {
             .text("\r\n").optional()
             .compile();
 
+    private String decodeAlarm(int event) {
+        switch (event) {
+            case 1:
+                return Position.ALARM_SOS;
+            case 17:
+                return Position.ALARM_LOW_BATTERY;
+            case 18:
+                return Position.ALARM_POWER_CUT;
+            case 19:
+                return Position.ALARM_OVERSPEED;
+            case 20:
+                return Position.ALARM_GEOFENCE_ENTER;
+            case 21:
+                return Position.ALARM_GEOFENCE_EXIT;
+            case 36:
+                return Position.ALARM_TOW;
+            default:
+                return null;
+        }
+    }
+
     private Position decodeRegularMessage(Channel channel, SocketAddress remoteAddress, ChannelBuffer buf) {
 
         Parser parser = new Parser(PATTERN, buf.toString(StandardCharsets.US_ASCII));
@@ -101,45 +121,43 @@ public class MeitrackProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setDeviceId(deviceSession.getDeviceId());
 
-        int event = parser.nextInt();
+        int event = parser.nextInt(0);
         position.set(Position.KEY_EVENT, event);
+        position.set(Position.KEY_ALARM, decodeAlarm(event));
 
-        position.setLatitude(parser.nextDouble());
-        position.setLongitude(parser.nextDouble());
+        position.setLatitude(parser.nextDouble(0));
+        position.setLongitude(parser.nextDouble(0));
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
         position.setValid(parser.next().equals("A"));
 
         position.set(Position.KEY_SATELLITES, parser.next());
-        int rssi = parser.nextInt();
+        int rssi = parser.nextInt(0);
 
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
 
         position.set(Position.KEY_HDOP, parser.next());
 
-        position.setAltitude(parser.nextDouble());
+        position.setAltitude(parser.nextDouble(0));
 
-        position.set(Position.KEY_ODOMETER, parser.next());
+        position.set(Position.KEY_ODOMETER, parser.nextInt(0));
         position.set("runtime", parser.next());
 
-        position.setNetwork(new Network(
-                CellTower.from(parser.nextInt(), parser.nextInt(), parser.nextInt(16), parser.nextInt(16), rssi)));
+        position.setNetwork(new Network(CellTower.from(
+                parser.nextInt(0), parser.nextInt(0), parser.nextHexInt(0), parser.nextHexInt(0), rssi)));
 
         position.set(Position.KEY_STATUS, parser.next());
 
         for (int i = 1; i <= 3; i++) {
             if (parser.hasNext()) {
-                position.set(Position.PREFIX_ADC + i, parser.nextInt(16));
+                position.set(Position.PREFIX_ADC + i, parser.nextHexInt(0));
             }
         }
 
-        position.set(Position.KEY_BATTERY, parser.nextInt(16));
-        position.set(Position.KEY_POWER, parser.nextInt(16));
+        position.set(Position.KEY_BATTERY, parser.nextHexInt(0));
+        position.set(Position.KEY_POWER, parser.nextHexInt(0));
 
         String eventData = parser.next();
         if (eventData != null && !eventData.isEmpty()) {
@@ -155,7 +173,7 @@ public class MeitrackProtocolDecoder extends BaseProtocolDecoder {
 
         if (parser.hasNext()) {
             String fuel = parser.next();
-            position.set(Position.KEY_FUEL,
+            position.set(Position.KEY_FUEL_LEVEL,
                     Integer.parseInt(fuel.substring(0, 2), 16) + Integer.parseInt(fuel.substring(2), 16) * 0.01);
         }
 

@@ -18,7 +18,6 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -39,8 +38,8 @@ public class XirgoProtocolDecoder extends BaseProtocolDecoder {
             .text("$$")
             .number("(d+),")                     // imei
             .number("(d+),")                     // event
-            .number("(dddd)/(dd)/(dd),")         // date
-            .number("(dd):(dd):(dd),")           // time
+            .number("(dddd)/(dd)/(dd),")         // date (yyyy/mm/dd)
+            .number("(dd):(dd):(dd),")           // time (hh:mm:ss)
             .number("(-?d+.?d*),")               // latitude
             .number("(-?d+.?d*),")               // longitude
             .number("(-?d+.?d*),")               // altitude
@@ -59,8 +58,8 @@ public class XirgoProtocolDecoder extends BaseProtocolDecoder {
             .text("$$")
             .number("(d+),")                     // imei
             .number("(d+),")                     // event
-            .number("(dddd)/(dd)/(dd),")         // date
-            .number("(dd):(dd):(dd),")           // time
+            .number("(dddd)/(dd)/(dd),")         // date (yyyy/mm/dd)
+            .number("(dd):(dd):(dd),")           // time (hh:mm:ss)
             .number("(-?d+.?d*),")               // latitude
             .number("(-?d+.?d*),")               // longitude
             .number("(-?d+.?d*),")               // altitude
@@ -120,22 +119,19 @@ public class XirgoProtocolDecoder extends BaseProtocolDecoder {
 
         position.set(Position.KEY_EVENT, parser.next());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
-        position.setLatitude(parser.nextDouble());
-        position.setLongitude(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
-        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
+        position.setLatitude(parser.nextDouble(0));
+        position.setLongitude(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
+        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
 
         position.set(Position.KEY_SATELLITES, parser.next());
         position.set(Position.KEY_HDOP, parser.next());
 
         if (newFormat) {
-            position.set(Position.KEY_ODOMETER, parser.nextDouble() * 1609.34);
+            position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1609.34);
             position.set(Position.KEY_FUEL_CONSUMPTION, parser.next());
         }
 
@@ -143,10 +139,10 @@ public class XirgoProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_RSSI, parser.next());
 
         if (!newFormat) {
-            position.set(Position.KEY_ODOMETER, parser.nextDouble() * 1609.34);
+            position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1609.34);
         }
 
-        position.setValid(parser.nextInt() == 1);
+        position.setValid(parser.nextInt(0) == 1);
 
         return position;
     }

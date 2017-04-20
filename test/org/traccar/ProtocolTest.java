@@ -82,8 +82,12 @@ public class ProtocolTest extends BaseTest {
         Assert.assertNotNull(decoder.decode(null, null, object));
     }
 
-    protected void verifyNothing(BaseProtocolDecoder decoder, Object object) throws Exception {
+    protected void verifyNull(BaseProtocolDecoder decoder, Object object) throws Exception {
         Assert.assertNull(decoder.decode(null, null, object));
+    }
+
+    protected void verifyAttribute(BaseProtocolDecoder decoder, Object object, String key, Object expected) throws Exception {
+        Assert.assertEquals(expected, ((Position) decoder.decode(null, null, object)).getAttributes().get(key));
     }
 
     protected void verifyAttributes(BaseProtocolDecoder decoder, Object object) throws Exception {
@@ -174,6 +178,18 @@ public class ProtocolTest extends BaseTest {
 
         if (checkAttributes) {
             Assert.assertFalse("no attributes", attributes.isEmpty());
+        }
+
+        if (attributes.containsKey(Position.KEY_ODOMETER)) {
+            Assert.assertTrue(attributes.get(Position.KEY_ODOMETER) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_RPM)) {
+            Assert.assertTrue(attributes.get(Position.KEY_RPM) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_FUEL_LEVEL)) {
+            Assert.assertTrue(attributes.get(Position.KEY_FUEL_LEVEL) instanceof Number);
         }
 
         if (position.getNetwork() != null && position.getNetwork().getCellTowers() != null) {

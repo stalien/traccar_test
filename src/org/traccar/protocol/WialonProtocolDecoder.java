@@ -18,7 +18,6 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -39,7 +38,7 @@ public class WialonProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN = new PatternBuilder()
             .number("(dd)(dd)(dd);")             // date (ddmmyy)
-            .number("(dd)(dd)(dd);")             // time
+            .number("(dd)(dd)(dd);")             // time (hhmmss)
             .number("(dd)(dd.d+);")              // latitude
             .expression("([NS]);")
             .number("(ddd)(dd.d+);")             // longitude
@@ -85,19 +84,16 @@ public class WialonProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
         position.setLatitude(parser.nextCoordinate());
         position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
 
         if (parser.hasNext()) {
-            int satellites = parser.nextInt();
+            int satellites = parser.nextInt(0);
             position.setValid(satellites >= 3);
             position.set(Position.KEY_SATELLITES, satellites);
         }
@@ -120,7 +116,11 @@ public class WialonProtocolDecoder extends BaseProtocolDecoder {
             for (String param : values) {
                 Matcher paramParser = Pattern.compile("(.*):[1-3]:(.*)").matcher(param);
                 if (paramParser.matches()) {
-                    position.set(paramParser.group(1).toLowerCase(), paramParser.group(2));
+                    try {
+                        position.set(paramParser.group(1).toLowerCase(), Double.parseDouble(paramParser.group(2)));
+                    } catch (NumberFormatException e) {
+                        position.set(paramParser.group(1).toLowerCase(), paramParser.group(2));
+                    }
                 }
             }
         }

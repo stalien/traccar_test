@@ -10,6 +10,15 @@ public class Tlt2hProtocolDecoderTest extends ProtocolTest {
 
         Tlt2hProtocolDecoder decoder = new Tlt2hProtocolDecoder(new Tlt2hProtocol());
 
+        verifyNull(decoder, text(
+                "#861075026000000#\r\n",
+                "#0000#AUTO#1\r\n",
+                "#002c4968045$GPRMC,001556.00,A,3542.1569,N,13938.9814,E,7.38,185.71,160417,,,A*55\r\n"));
+
+        verifyPositions(decoder, text(
+                "#863835026938048#MT500#0000#AUTO#1\r\n",
+                "#67904917c0e$GPRMC,173926.00,A,4247.8476,N,08342.6996,W,0.03,,160417,,,A*59\r\n"));
+
         verifyPositions(decoder, text(
                 "#357671030108689##0000#AUTO#1\r\n",
                 "#13AE2F8F$GPRMC,211452.000,A,0017.378794,S,03603.441981,E,0.000,0,060216,,,A*68\r\n"));

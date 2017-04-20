@@ -67,7 +67,7 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
 
         position.set(Position.KEY_TYPE, buf.readUnsignedByte());
 
-        position.set("command", buf.readBytes(buf.readInt()).toString(StandardCharsets.US_ASCII));
+        position.set(Position.KEY_COMMAND, buf.readBytes(buf.readInt()).toString(StandardCharsets.US_ASCII));
 
     }
 
@@ -96,10 +96,10 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
                 position.set(Position.PREFIX_ADC + 1, readValue(buf, length, false));
                 break;
             case 66:
-                position.set(Position.KEY_POWER, readValue(buf, length, false) + "mV");
+                position.set(Position.KEY_POWER, readValue(buf, length, false) * 0.001);
                 break;
             case 67:
-                position.set(Position.KEY_BATTERY, readValue(buf, length, false) + "mV");
+                position.set(Position.KEY_BATTERY, readValue(buf, length, false) * 0.001);
                 break;
             case 70:
                 position.set(Position.KEY_DEVICE_TEMP, readValue(buf, length, true) * 0.1);
@@ -178,7 +178,7 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
                 }
 
                 if (BitUtil.check(locationMask, 7)) {
-                    position.set("operator", buf.readUnsignedInt());
+                    position.set(Position.KEY_OPERATOR, buf.readUnsignedInt());
                 }
 
             } else {
@@ -246,7 +246,7 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private List<Position> parseData(
-            Channel channel, SocketAddress remoteAddress, ChannelBuffer buf, int packetId, String... imei) {
+            Channel channel, SocketAddress remoteAddress, ChannelBuffer buf, int locationPacketId, String... imei) {
         List<Position> positions = new LinkedList<>();
 
         if (!(channel instanceof DatagramChannel)) {
@@ -279,13 +279,15 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
 
         if (channel != null) {
             if (channel instanceof DatagramChannel) {
-                ChannelBuffer response = ChannelBuffers.directBuffer(5);
-                response.writeShort(3);
-                response.writeShort(packetId);
-                response.writeByte(0x02);
+                ChannelBuffer response = ChannelBuffers.dynamicBuffer();
+                response.writeShort(5);
+                response.writeShort(0);
+                response.writeByte(0x01);
+                response.writeByte(locationPacketId);
+                response.writeByte(count);
                 channel.write(response, remoteAddress);
             } else {
-                ChannelBuffer response = ChannelBuffers.directBuffer(4);
+                ChannelBuffer response = ChannelBuffers.dynamicBuffer();
                 response.writeInt(count);
                 channel.write(response);
             }
@@ -320,12 +322,13 @@ public class TeltonikaProtocolDecoder extends BaseProtocolDecoder {
 
     private Object decodeUdp(Channel channel, SocketAddress remoteAddress, ChannelBuffer buf) throws Exception {
 
-        buf.skipBytes(2);
-        int packetId = buf.readUnsignedShort();
-        buf.skipBytes(2);
+        buf.readUnsignedShort(); // length
+        buf.readUnsignedShort(); // packet id
+        buf.readUnsignedByte(); // packet type
+        int locationPacketId = buf.readUnsignedByte();
         String imei = buf.readBytes(buf.readUnsignedShort()).toString(StandardCharsets.US_ASCII);
 
-        return parseData(channel, remoteAddress, buf, packetId, imei);
+        return parseData(channel, remoteAddress, buf, locationPacketId, imei);
 
     }
 

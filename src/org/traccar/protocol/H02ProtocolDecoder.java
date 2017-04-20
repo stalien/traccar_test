@@ -73,6 +73,8 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_ALARM, Position.ALARM_SOS);
         } else if (!BitUtil.check(status, 2)) {
             position.set(Position.KEY_ALARM, Position.ALARM_OVERSPEED);
+        } else if (!BitUtil.check(status, 19)) {
+            position.set(Position.KEY_ALARM, Position.ALARM_POWER_CUT);
         }
 
         position.set(Position.KEY_IGNITION, BitUtil.check(status, 10));
@@ -140,6 +142,7 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
         position.setCourse((buf.readUnsignedByte() & 0x0f) * 100.0 + BcdUtil.readInteger(buf, 2));
 
         processStatus(position, buf.readUnsignedInt());
+
         return position;
     }
 
@@ -149,7 +152,7 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+),")                     // imei
             .expression("[^,]+,")
             .any()
-            .number("(?:(dd)(dd)(dd))?,")        // time
+            .number("(?:(dd)(dd)(dd))?,")        // time (hhmmss)
             .expression("([AV])?,")              // validity
             .groupBegin()
             .number("-(d+)-(d+.d+),")            // latitude
@@ -168,7 +171,23 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             .number("(?:(dd)(dd)(dd))?")         // date (ddmmyy)
             .any()
             .number(",(x{8})")                   // status
-            .expression("(?:#|,.*)")
+            .groupBegin()
+            .number(",(d+),")                    // odometer
+            .number("(-?d+),")                   // temperature
+            .number("(d+.d+),")                  // fuel
+            .number("(-?d+),")                   // altitude
+            .number("(x+),")                     // lac
+            .number("(x+)#")                     // cid
+            .or()
+            .number(",(d+),")
+            .number("(d+),")
+            .number("(d+),")
+            .number("(d+)#")
+            .or()
+            .expression(",.*")
+            .or()
+            .text("#")
+            .groupEnd()
             .compile();
 
     private static final Pattern PATTERN_NBR = new PatternBuilder()
@@ -176,7 +195,7 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             .expression("..,")                   // manufacturer
             .number("(d+),")                     // imei
             .text("NBR,")
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .number("(d+),")                     // mcc
             .number("(d+),")                     // mnc
             .number("d+,")                       // gsm delay time
@@ -205,7 +224,7 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
 
         DateBuilder dateBuilder = new DateBuilder();
         if (parser.hasNext(3)) {
-            dateBuilder.setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            dateBuilder.setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         }
 
         if (parser.hasNext()) {
@@ -226,17 +245,33 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             position.setLongitude(parser.nextCoordinate());
         }
 
-        position.setSpeed(parser.nextDouble());
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(parser.nextDouble(0));
+        position.setCourse(parser.nextDouble(0));
 
         if (parser.hasNext(3)) {
-            dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+            dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
             position.setTime(dateBuilder.getDate());
         } else {
             position.setTime(new Date());
         }
 
-        processStatus(position, parser.nextLong(16));
+        processStatus(position, parser.nextLong(16, 0));
+
+        if (parser.hasNext(6)) {
+            position.set(Position.KEY_ODOMETER, parser.nextInt(0));
+            position.set(Position.PREFIX_TEMP + 1, parser.nextInt(0));
+            position.set(Position.KEY_FUEL_LEVEL, parser.nextDouble(0));
+
+            position.setAltitude(parser.nextInt(0));
+
+            position.setNetwork(new Network(CellTower.fromLacCid(parser.nextHexInt(0), parser.nextHexInt(0))));
+        }
+
+        if (parser.hasNext(4)) {
+            for (int i = 1; i <= 4; i++) {
+                position.set(Position.PREFIX_IO + i, parser.nextInt(0));
+            }
+        }
 
         return position;
     }
@@ -258,11 +293,11 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
         position.setDeviceId(deviceSession.getDeviceId());
 
         DateBuilder dateBuilder = new DateBuilder()
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+                .setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
 
         Network network = new Network();
-        int mcc = parser.nextInt();
-        int mnc = parser.nextInt();
+        int mcc = parser.nextInt(0);
+        int mnc = parser.nextInt(0);
 
         String[] cells = parser.next().split(",");
         for (int i = 0; i < cells.length / 3; i++) {
@@ -272,11 +307,11 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
 
         position.setNetwork(network);
 
-        dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+        dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
 
         getLastLocation(position, dateBuilder.getDate());
 
-        processStatus(position, parser.nextLong(16));
+        processStatus(position, parser.nextLong(16, 0));
 
         return position;
     }

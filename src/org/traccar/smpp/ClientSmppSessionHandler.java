@@ -16,6 +16,7 @@
  */
 package org.traccar.smpp;
 
+import org.traccar.events.TextMessageEventHandler;
 import org.traccar.helper.Log;
 
 import com.cloudhopper.commons.charset.CharsetUtil;
@@ -44,16 +45,16 @@ public class ClientSmppSessionHandler extends DefaultSmppSessionHandler {
         try {
             if (request instanceof DeliverSm) {
                 if (request.getOptionalParameters() != null) {
-                    Log.debug("Message Delivered: "
+                    Log.debug("SMS Message Delivered: "
                             + request.getOptionalParameter(SmppConstants.TAG_RECEIPTED_MSG_ID).getValueAsString()
                             + ", State: "
                             + request.getOptionalParameter(SmppConstants.TAG_MSG_STATE).getValueAsByte());
                 } else {
-                    Log.debug("Message Received: "
-                            + CharsetUtil.decode(((DeliverSm) request).getShortMessage(),
-                            smppClient.mapDataCodingToCharset(((DeliverSm) request).getDataCoding()))
-                            + ", Source Address: "
-                            + ((DeliverSm) request).getSourceAddress().getAddress());
+                    String sourceAddress = ((DeliverSm) request).getSourceAddress().getAddress();
+                    String message = CharsetUtil.decode(((DeliverSm) request).getShortMessage(),
+                            smppClient.mapDataCodingToCharset(((DeliverSm) request).getDataCoding()));
+                    Log.debug("SMS Message Received: " + message.trim() + ", Source Address: " + sourceAddress);
+                    TextMessageEventHandler.handleTextMessage(sourceAddress, message);
                 }
             }
             response = request.createResponse();
@@ -68,7 +69,7 @@ public class ClientSmppSessionHandler extends DefaultSmppSessionHandler {
 
     @Override
     public void fireChannelUnexpectedlyClosed() {
-        Log.warning("Smpp session channel unexpectedly closed");
+        Log.warning("SMPP session channel unexpectedly closed");
         smppClient.scheduleReconnect();
     }
 }

@@ -18,7 +18,6 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -35,8 +34,8 @@ public class Ardi01ProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN = new PatternBuilder()
             .number("(d+),")                     // imei
-            .number("(dddd)(dd)(dd)")            // date
-            .number("(dd)(dd)(dd),")             // time
+            .number("(dddd)(dd)(dd)")            // date (yyyymmdd)
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
             .number("(-?d+.d+),")                // longitude
             .number("(-?d+.d+),")                // latitude
             .number("(d+.?d*),")                 // speed
@@ -66,18 +65,15 @@ public class Ardi01ProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
-        position.setLongitude(parser.nextDouble());
-        position.setLatitude(parser.nextDouble());
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
+        position.setLongitude(parser.nextDouble(0));
+        position.setLatitude(parser.nextDouble(0));
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
 
-        int satellites = parser.nextInt();
+        int satellites = parser.nextInt(0);
         position.setValid(satellites >= 3);
         position.set(Position.KEY_SATELLITES, satellites);
 

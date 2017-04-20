@@ -30,6 +30,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.logging.LoggingHandler;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.traccar.events.CommandResultEventHandler;
+import org.traccar.events.FuelDropEventHandler;
 import org.traccar.events.GeofenceEventHandler;
 import org.traccar.events.IgnitionEventHandler;
 import org.traccar.events.MaintenanceEventHandler;
@@ -55,6 +56,7 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
 
     private CommandResultEventHandler commandResultEventHandler;
     private OverspeedEventHandler overspeedEventHandler;
+    private FuelDropEventHandler fuelDropEventHandler;
     private MotionEventHandler motionEventHandler;
     private GeofenceEventHandler geofenceEventHandler;
     private AlertEventHandler alertEventHandler;
@@ -112,9 +114,12 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
     public BasePipelineFactory(TrackerServer server, String protocol) {
         this.server = server;
 
-        timeout = Context.getConfig().getInteger(protocol + ".timeout", 0);
+        timeout = Context.getConfig().getInteger(protocol + ".timeout");
         if (timeout == 0) {
-            timeout = Context.getConfig().getInteger(protocol + ".resetDelay", 0); // temporary
+            timeout = Context.getConfig().getInteger(protocol + ".resetDelay"); // temporary
+            if (timeout == 0) {
+                timeout = Context.getConfig().getInteger("server.timeout");
+            }
         }
 
         if (Context.getConfig().getBoolean("filter.enable")) {
@@ -150,25 +155,12 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
 
         if (Context.getConfig().getBoolean("event.enable")) {
             commandResultEventHandler = new CommandResultEventHandler();
-
-            if (Context.getConfig().getBoolean("event.overspeedHandler")) {
-                overspeedEventHandler = new OverspeedEventHandler();
-            }
-
-            if (Context.getConfig().getBoolean("event.motionHandler")) {
-                motionEventHandler = new MotionEventHandler();
-            }
-        }
-        if (Context.getConfig().getBoolean("event.geofenceHandler")) {
+            overspeedEventHandler = new OverspeedEventHandler();
+            fuelDropEventHandler = new FuelDropEventHandler();
+            motionEventHandler = new MotionEventHandler();
             geofenceEventHandler = new GeofenceEventHandler();
-        }
-        if (Context.getConfig().getBoolean("event.alertHandler")) {
             alertEventHandler = new AlertEventHandler();
-        }
-        if (Context.getConfig().getBoolean("event.ignitionHandler")) {
             ignitionEventHandler = new IgnitionEventHandler();
-        }
-        if (Context.getConfig().getBoolean("event.maintenanceHandler")) {
             maintenanceEventHandler = new MaintenanceEventHandler();
         }
     }
@@ -188,14 +180,14 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
 
         addSpecificHandlers(pipeline);
 
+        if (geolocationHandler != null) {
+            pipeline.addLast("location", geolocationHandler);
+        }
         if (hemisphereHandler != null) {
             pipeline.addLast("hemisphere", hemisphereHandler);
         }
         if (geocoderHandler != null) {
             pipeline.addLast("geocoder", geocoderHandler);
-        }
-        if (geolocationHandler != null) {
-            pipeline.addLast("location", geolocationHandler);
         }
         pipeline.addLast("remoteAddress", new RemoteAddressHandler());
 
@@ -231,6 +223,10 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
 
         if (overspeedEventHandler != null) {
             pipeline.addLast("OverspeedEventHandler", overspeedEventHandler);
+        }
+
+        if (fuelDropEventHandler != null) {
+            pipeline.addLast("FuelDropEventHandler", fuelDropEventHandler);
         }
 
         if (motionEventHandler != null) {

@@ -37,13 +37,13 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_BASIC = new PatternBuilder()
             .expression("G[PN]RMC,")
-            .number("(?:(dd)(dd)(dd))?.(d+),")   // time
+            .number("(?:(dd)(dd)(dd))?.?d*,")    // time (hhmmss)
             .expression("([AV]),")               // validity
             .number("(d*?)(d?d.d+),([NS]),")     // latitude
             .number("(d*?)(d?d.d+),([EW])?,")    // longitude
             .number("(d+.?d*),")                 // speed
             .number("(d+.?d*)?,")                // course
-            .number("(?:(dd)(dd)(dd))?,")        // date
+            .number("(?:(dd)(dd)(dd))?,")        // date (ddmmyy)
             .expression("[^*]*").text("*")
             .number("xx")                        // checksum
             .expression("\\r\\n").optional()
@@ -104,15 +104,15 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
         }
 
         DateBuilder dateBuilder = new DateBuilder()
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt(), parser.nextInt());
+                .setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
 
         position.setValid(parser.next().equals("A"));
         position.setLatitude(parser.nextCoordinate());
         position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(parser.nextDouble());
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(parser.nextDouble(0));
+        position.setCourse(parser.nextDouble(0));
 
-        dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+        dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         position.setTime(dateBuilder.getDate());
 
         position.set("signal", parser.next());
@@ -127,9 +127,9 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
         if (full) {
             position.set(Position.KEY_SATELLITES, parser.next().replaceFirst("^0*(?![\\.$])", ""));
 
-            position.setAltitude(parser.nextDouble());
+            position.setAltitude(parser.nextDouble(0));
 
-            position.set(Position.KEY_POWER, parser.nextDouble());
+            position.set(Position.KEY_POWER, parser.nextDouble(0));
         }
 
         return position;

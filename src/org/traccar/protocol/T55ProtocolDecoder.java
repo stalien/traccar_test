@@ -36,7 +36,7 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_GPRMC = new PatternBuilder()
             .text("$GPRMC,")
-            .number("(dd)(dd)(dd).?d*,")         // time
+            .number("(dd)(dd)(dd).?d*,")         // time (hhmmss)
             .expression("([AV]),")               // validity
             .number("(dd)(dd.d+),")              // latitude
             .expression("([NS]),")
@@ -44,7 +44,7 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
             .expression("([EW]),")
             .number("(d+.?d*)?,")                // speed
             .number("(d+.?d*)?,")                // course
-            .number("(dd)(dd)(dd),")             // date
+            .number("(dd)(dd)(dd),")             // date (ddmmyy)
             .expression("[^*]+")
             .text("*")
             .expression("[^,]+")
@@ -59,7 +59,7 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_GPGGA = new PatternBuilder()
             .text("$GPGGA,")
-            .number("(dd)(dd)(dd).?d*,")         // time
+            .number("(dd)(dd)(dd).?d*,")         // time (hhmmss)
             .number("(d+)(dd.d+),")              // latitude
             .expression("([NS]),")
             .number("(d+)(dd.d+),")              // longitude
@@ -81,8 +81,8 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_TRCCR = new PatternBuilder()
             .text("$TRCCR,")
-            .number("(dddd)(dd)(dd)")            // date
-            .number("(dd)(dd)(dd).?d*,")         // time
+            .number("(dddd)(dd)(dd)")            // date (yyyymmdd)
+            .number("(dd)(dd)(dd).?d*,")         // time (hhmmss)
             .expression("([AV]),")               // validity
             .number("(-?d+.d+),")                // latitude
             .number("(-?d+.d+),")                // longitude
@@ -115,15 +115,15 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
         }
 
         DateBuilder dateBuilder = new DateBuilder()
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+                .setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
 
         position.setValid(parser.next().equals("A"));
         position.setLatitude(parser.nextCoordinate());
         position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(parser.nextDouble());
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(parser.nextDouble(0));
+        position.setCourse(parser.nextDouble(0));
 
-        dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
+        dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         position.setTime(dateBuilder.getDate());
 
         if (parser.hasNext(5)) {
@@ -136,8 +136,8 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
             position.setDeviceId(deviceSession.getDeviceId());
 
             position.set(Position.KEY_IGNITION, parser.hasNext() && parser.next().equals("1"));
-            position.set(Position.KEY_FUEL, parser.nextInt());
-            position.set(Position.KEY_BATTERY, parser.nextInt());
+            position.set(Position.KEY_FUEL_LEVEL, parser.nextInt(0));
+            position.set(Position.KEY_BATTERY, parser.nextInt(0));
         }
 
         if (parser.hasNext()) {
@@ -168,7 +168,7 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
 
         DateBuilder dateBuilder = new DateBuilder()
                 .setCurrentDate()
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+                .setTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
         position.setTime(dateBuilder.getDate());
 
         position.setValid(true);
@@ -193,8 +193,8 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
         position.setValid(parser.next().equals("A"));
         position.setLatitude(parser.nextCoordinate());
         position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(parser.nextDouble());
-        position.setCourse(parser.nextDouble());
+        position.setSpeed(parser.nextDouble(0));
+        position.setCourse(parser.nextDouble(0));
 
         return position;
     }
@@ -210,17 +210,14 @@ public class T55ProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
         position.setValid(parser.next().equals("A"));
-        position.setLatitude(parser.nextDouble());
-        position.setLongitude(parser.nextDouble());
-        position.setSpeed(parser.nextDouble());
-        position.setCourse(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
+        position.setLatitude(parser.nextDouble(0));
+        position.setLongitude(parser.nextDouble(0));
+        position.setSpeed(parser.nextDouble(0));
+        position.setCourse(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
 
         position.set(Position.KEY_BATTERY, parser.next());
 

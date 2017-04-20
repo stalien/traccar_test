@@ -18,7 +18,6 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -35,20 +34,20 @@ public class CguardProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_NV = new PatternBuilder()
             .text("NV:")
-            .number("(dd)(dd)(dd) ")             // date
-            .number("(dd)(dd)(dd):")             // time
-            .number("(-?d+.d+):")                // longitude
-            .number("(-?d+.d+):")                // latitude
-            .number("(d+.?d*):")                 // speed
-            .number("(?:NAN|(d+.?d*)):")         // accuracy
-            .number("(?:NAN|(d+.?d*)):")         // course
-            .number("(?:NAN|(d+.?d*))")          // altitude
+            .number("(dd)(dd)(dd) ")             // date (yymmdd)
+            .number("(dd)(dd)(dd)")              // time (hhmmss)
+            .number(":(-?d+.d+)")                // longitude
+            .number(":(-?d+.d+)")                // latitude
+            .number(":(d+.?d*)")                 // speed
+            .number(":(?:NAN|(d+.?d*))")         // accuracy
+            .number(":(?:NAN|(d+.?d*))")         // course
+            .number(":(?:NAN|(d+.?d*))").optional() // altitude
             .compile();
 
     private static final Pattern PATTERN_BC = new PatternBuilder()
             .text("BC:")
-            .number("(dd)(dd)(dd) ")             // date
-            .number("(dd)(dd)(dd):")             // time
+            .number("(dd)(dd)(dd) ")             // date (yymmdd)
+            .number("(dd)(dd)(dd):")             // time (hhmmss)
             .expression("(.+)")                  // data
             .compile();
 
@@ -63,20 +62,17 @@ public class CguardProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setTime(parser.nextDateTime());
 
         position.setValid(true);
-        position.setLatitude(parser.nextDouble());
-        position.setLongitude(parser.nextDouble());
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
+        position.setLatitude(parser.nextDouble(0));
+        position.setLongitude(parser.nextDouble(0));
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
 
-        position.setAccuracy(parser.nextDouble());
+        position.setAccuracy(parser.nextDouble(0));
 
-        position.setCourse(parser.nextDouble());
-        position.setAltitude(parser.nextDouble());
+        position.setCourse(parser.nextDouble(0));
+        position.setAltitude(parser.nextDouble(0));
 
         return position;
     }
@@ -92,11 +88,7 @@ public class CguardProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setDate(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-
-        getLastLocation(position, dateBuilder.getDate());
+        getLastLocation(position, parser.nextDateTime());
 
         String[] data = parser.next().split(":");
         for (int i = 0; i < data.length / 2; i++) {

@@ -18,6 +18,7 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
+import org.traccar.helper.Checksum;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.DateUtil;
 import org.traccar.helper.Parser;
@@ -31,30 +32,32 @@ import java.util.regex.Pattern;
 
 public class TaipProtocolDecoder extends BaseProtocolDecoder {
 
-    private final boolean sendResponse;
-
-    public TaipProtocolDecoder(TaipProtocol protocol, boolean sendResponse) {
+    public TaipProtocolDecoder(TaipProtocol protocol) {
         super(protocol);
-        this.sendResponse = sendResponse;
     }
 
     private static final Pattern PATTERN = new PatternBuilder()
             .groupBegin()
             .expression("R[EP]V")                // type
             .groupBegin()
-            .number("dd")                        // event index
+            .number("(dd)")                      // event
             .number("(dddd)")                    // week
             .number("(d)")                       // day
             .groupEnd("?")
             .number("(d{5})")                    // seconds
             .or()
             .expression("(?:RGP|RCQ|RBR)")       // type
-            .number("(?:dd)?")
-            .number("(dd)(dd)(dd)")              // date
-            .number("(dd)(dd)(dd)")              // time
+            .number("(dd)?")                     // event
+            .number("(dd)(dd)(dd)")              // date (mmddyy)
+            .number("(dd)(dd)(dd)")              // time (hhmmss)
             .groupEnd()
+            .groupBegin()
             .number("([-+]dd)(d{5})")            // latitude
             .number("([-+]ddd)(d{5})")           // longitude
+            .or()
+            .number("([-+])(dd)(dd.dddd)")       // latitude
+            .number("([-+])(ddd)(dd.dddd)")      // longitude
+            .groupEnd()
             .number("(ddd)")                     // speed
             .number("(ddd)")                     // course
             .groupBegin()
@@ -101,32 +104,41 @@ public class TaipProtocolDecoder extends BaseProtocolDecoder {
         Position position = new Position();
         position.setProtocol(getProtocolName());
 
-        if (parser.hasNext(2)) {
-            position.setTime(getTime(parser.nextInt(), parser.nextInt(), parser.nextInt()));
+        if (parser.hasNext(3)) {
+            position.set(Position.KEY_EVENT, parser.nextInt(0));
+            position.setTime(getTime(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0)));
         } else if (parser.hasNext()) {
-            position.setTime(getTime(parser.nextInt()));
+            position.setTime(getTime(parser.nextInt(0)));
+        }
+
+        if (parser.hasNext()) {
+            position.set(Position.KEY_EVENT, parser.nextInt(0));
         }
 
         if (parser.hasNext(6)) {
-            DateBuilder dateBuilder = new DateBuilder()
-                    .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
-                    .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
-            position.setTime(dateBuilder.getDate());
+            position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
         }
-
-        position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_DEG));
-        position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_DEG));
-        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
 
         if (parser.hasNext(4)) {
-            position.set(Position.KEY_INPUT, parser.nextInt(16));
-            position.set(Position.KEY_SATELLITES, parser.nextInt(16));
-            position.set(Position.KEY_BATTERY, parser.nextInt());
-            position.set(Position.KEY_ODOMETER, parser.nextLong(16));
+            position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_DEG));
+            position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_DEG));
+        }
+        if (parser.hasNext(6)) {
+            position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG_MIN));
+            position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.HEM_DEG_MIN));
         }
 
-        position.setValid(parser.nextInt() != 0);
+        position.setSpeed(UnitsConverter.knotsFromMph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
+
+        if (parser.hasNext(4)) {
+            position.set(Position.KEY_INPUT, parser.nextHexInt(0));
+            position.set(Position.KEY_SATELLITES, parser.nextHexInt(0));
+            position.set(Position.KEY_BATTERY, parser.nextInt(0));
+            position.set(Position.KEY_ODOMETER, parser.nextLong(16, 0));
+        }
+
+        position.setValid(parser.nextInt(0) != 0);
 
         String[] attributes = null;
         beginIndex = sentence.indexOf(';');
@@ -138,6 +150,10 @@ public class TaipProtocolDecoder extends BaseProtocolDecoder {
             attributes = sentence.substring(beginIndex, endIndex).split(";");
         }
 
+        String uniqueId = null;
+        DeviceSession deviceSession = null;
+        String messageIndex = null;
+
         if (attributes != null) {
             for (String attribute : attributes) {
                 int index = attribute.indexOf('=');
@@ -147,12 +163,10 @@ public class TaipProtocolDecoder extends BaseProtocolDecoder {
                     switch (key) {
 
                         case "id":
-                            DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, value);
+                            uniqueId = value;
+                            deviceSession = getDeviceSession(channel, remoteAddress, value);
                             if (deviceSession != null) {
                                 position.setDeviceId(deviceSession.getDeviceId());
-                            }
-                            if (sendResponse && channel != null) {
-                                channel.write(value);
                             }
                             break;
 
@@ -173,13 +187,26 @@ public class TaipProtocolDecoder extends BaseProtocolDecoder {
                             break;
 
                     }
+                } else if (attribute.startsWith("#")) {
+                    messageIndex = attribute;
                 }
             }
         }
 
-        if (position.getDeviceId() != 0) {
+        if (deviceSession != null) {
+            if (channel != null) {
+                if (messageIndex != null) {
+                    String response = ">ACK;" + messageIndex + ";ID=" + uniqueId + ";*";
+                    response += String.format("%02X", Checksum.xor(response)) + "<";
+                    channel.write(response, remoteAddress);
+                } else {
+                    channel.write(uniqueId, remoteAddress);
+                }
+            }
+
             return position;
         }
+
         return null;
     }
 

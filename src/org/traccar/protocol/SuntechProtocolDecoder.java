@@ -31,11 +31,13 @@ import java.util.TimeZone;
 public class SuntechProtocolDecoder extends BaseProtocolDecoder {
 
     private int protocolType;
+    private boolean hbm;
 
     public SuntechProtocolDecoder(SuntechProtocol protocol) {
         super(protocol);
 
         protocolType = Context.getConfig().getInteger(getProtocolName() + ".protocolType");
+        hbm = Context.getConfig().getBoolean(getProtocolName() + ".hbm");
     }
 
     public void setProtocolType(int protocolType) {
@@ -65,7 +67,9 @@ public class SuntechProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setDeviceId(deviceSession.getDeviceId());
 
-        position.set(Position.KEY_VERSION_FW, values[index++]);
+        if (!type.equals("Alert") || protocolType == 0) {
+            position.set(Position.KEY_VERSION_FW, values[index++]);
+        }
 
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHH:mm:ss");
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -144,12 +148,16 @@ public class SuntechProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_INDEX, Integer.parseInt(values[index++]));
         }
 
-        if (index < values.length) {
-            position.set(Position.KEY_HOURS, Integer.parseInt(values[index++]));
-        }
+        if (hbm) {
 
-        if (index < values.length) {
-            position.set(Position.KEY_BATTERY, Double.parseDouble(values[index]));
+            if (index < values.length) {
+                position.set(Position.KEY_HOURS, Integer.parseInt(values[index++]));
+            }
+
+            if (index < values.length) {
+                position.set(Position.KEY_BATTERY, Double.parseDouble(values[index]));
+            }
+
         }
 
         return position;
