@@ -142,4 +142,14 @@ public class Device extends Extensible {
         this.category = category;
     }
 
+    private boolean showOnMap;
+
+    public boolean getShowOnMap() {
+        return showOnMap;
+    }
+
+    public void setShowOnMap(boolean showOnMap) {
+        this.showOnMap = showOnMap;
+    }
+
 }

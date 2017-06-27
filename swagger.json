@@ -1440,6 +1440,9 @@
                         "type": "integer"
                     }
                 },
+                "showOnMap": {
+                    "type": "boolean"
+                },
                 "attributes": {}
             }
         },
