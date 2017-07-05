@@ -1446,6 +1446,9 @@
                 "pedometer": {
                     "type": "boolean"
                 },
+                "watchBattery": {
+                    "type": "boolean"
+                },
                 "attributes": {}
             }
         },

@@ -162,4 +162,14 @@ public class Device extends Extensible {
         this.pedometer = pedometer;
     }
 
+    private boolean watchBattery;
+
+    public boolean getWatchBattery() {
+        return watchBattery;
+    }
+
+    public void setWatchBattery(boolean watchBattery) {
+        this.watchBattery = watchBattery;
+    }
+
 }
