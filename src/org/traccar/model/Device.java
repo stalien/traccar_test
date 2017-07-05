@@ -172,4 +172,14 @@ public class Device extends Extensible {
         this.watchBattery = watchBattery;
     }
 
+    private boolean notifyOnRemoval;
+
+    public boolean getNotifyOnRemoval() {
+        return notifyOnRemoval;
+    }
+
+    public void setNotifyOnRemoval(boolean notifyOnRemoval) {
+        this.notifyOnRemoval = notifyOnRemoval;
+    }
+
 }

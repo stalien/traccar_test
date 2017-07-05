@@ -1449,6 +1449,9 @@
                 "watchBattery": {
                     "type": "boolean"
                 },
+                "notifyOnRemoval": {
+                    "type": "boolean"
+                },
                 "attributes": {}
             }
         },

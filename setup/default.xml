@@ -111,8 +111,8 @@
     </entry>
 
     <entry key='database.insertDevice'>
-        INSERT INTO devices (name, uniqueId, groupId, attributes, phone, model, contact, category, showOnMap, pedometer, watchBattery)
-        VALUES (:name, :uniqueId, :groupId, :attributes, :phone, :model, :contact, :category, :showOnMap, :pedometer, :watchBattery)
+        INSERT INTO devices (name, uniqueId, groupId, attributes, phone, model, contact, category, showOnMap, pedometer, watchBattery, notifyOnRemoval)
+        VALUES (:name, :uniqueId, :groupId, :attributes, :phone, :model, :contact, :category, :showOnMap, :pedometer, :watchBattery, :notifyOnRemoval)
     </entry>
 
     <entry key='database.updateDevice'>
@@ -127,7 +127,8 @@
         category = :category,
         showOnMap = :showOnMap,
         pedometer = :pedometer,
-        watchBattery = :watchBattery
+        watchBattery = :watchBattery,
+        notifyOnRemoval = :notifyOnRemoval
         WHERE id = :id
     </entry>
 
