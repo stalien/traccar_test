@@ -152,4 +152,14 @@ public class Device extends Extensible {
         this.showOnMap = showOnMap;
     }
 
+    private boolean pedometer;
+
+    public boolean getPedometer() {
+        return pedometer;
+    }
+
+    public void setPedometer(boolean pedometer) {
+        this.pedometer = pedometer;
+    }
+
 }
